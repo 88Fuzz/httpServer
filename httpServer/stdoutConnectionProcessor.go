@@ -1,7 +1,6 @@
 package httpServer
 
 import "net"
-import "fmt"
 import "io"
 
 import "time"
@@ -9,7 +8,21 @@ import "bytes"
 
 type StdoutConnectionProcessor struct{}
 
-func (connectionProcessor StdoutConnectionProcessor) Process(connection net.Conn) error {
+func (connectionProcessor StdoutConnectionProcessor) Process(connection net.Conn,
+	processorProvider HttpRequestProcessorProvider) {
+	request, err := readRequest(connection)
+	if err != nil {
+		writeError(connection, BAD_REQUEST)
+		return
+	}
+
+	response := processRequest(processorProvider, request)
+	responseString := createHttpResponse(request, response)
+	writeAndClose(connection, responseString)
+}
+
+func readRequest(connection net.Conn) (Request, error) {
+	var emptyRequest Request
 	var requestBuffer bytes.Buffer
 	var err error
 	count, readSize := 256, 256
@@ -29,37 +42,28 @@ func (connectionProcessor StdoutConnectionProcessor) Process(connection net.Conn
 	if err != nil {
 		if netError, ok := err.(net.Error); ok {
 			if !netError.Timeout() {
-				return err
+				return emptyRequest, err
 			}
 		} else if err != io.EOF {
-			return err
+			return emptyRequest, err
 		}
 	}
 
 	reqStr := requestBuffer.String()
-	request, err := parseRequest(reqStr)
-
-	if err != nil {
-		fmt.Printf("Error parsing ")
-		fmt.Println(err)
-	} else {
-		fmt.Println("Valid request: ", request.requestType, request.version, request.method, request.methodValue, request.path,
-			request.headers, request.body)
-	}
-
-	fmt.Printf("All done here\n")
-
-	returnString := createHttpResponse(request, createTempResponse())
-	fmt.Println("Writing ", returnString)
-	connection.Write([]byte(returnString))
-	connection.Close()
-
-	return nil
+	return parseRequest(reqStr)
 }
 
-func createTempResponse() Response {
-	var response Response
-	response.statusCode = NOT_FOUND
+func writeError(connection net.Conn, statusCode StatusCode_t) {
+	var errorResponse Response
+	var request Request
+	errorResponse.StatusCode = statusCode
+	request.RequestType = FULL
 
-	return response
+	responseString := createHttpResponse(request, errorResponse)
+	writeAndClose(connection, responseString)
+}
+
+func writeAndClose(connection net.Conn, response string) {
+	connection.Write([]byte(response))
+	connection.Close()
 }

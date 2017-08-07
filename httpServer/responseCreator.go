@@ -3,7 +3,7 @@ package httpServer
 import "bytes"
 import "strconv"
 
-var statusStrings = map[STATUS_CODE]string{
+var statusStrings = map[StatusCode_t]string{
 	OK:                    "OK",
 	CREATED:               "Created",
 	ACCEPTED:              "Accepted",
@@ -21,7 +21,7 @@ var statusStrings = map[STATUS_CODE]string{
 	SERVICE_UNAVAILABLE:   "Service Unavailable",
 }
 
-var statusValues = map[STATUS_CODE]int{
+var statusValues = map[StatusCode_t]int{
 	OK:                    200,
 	CREATED:               201,
 	ACCEPTED:              202,
@@ -42,12 +42,12 @@ var statusValues = map[STATUS_CODE]int{
 func createHttpResponse(request Request, response Response) string {
 	var buffer bytes.Buffer
 	//Simple requests, i.e. HTTP/0.9 only supports returning the body
-	if request.requestType == FULL {
+	if request.RequestType == FULL {
 		buffer.WriteString(createStatusLine(response))
 		buffer.WriteString(createHeaders(response))
 	}
 
-	if request.method != HEAD {
+	if request.Method != HEAD {
 		buffer.WriteString(createBody(response))
 	}
 
@@ -55,20 +55,20 @@ func createHttpResponse(request Request, response Response) string {
 }
 
 func createStatusLine(response Response) string {
-	statusString := getStatusString(response.statusCode)
-	return HTTP + HTTP_VERSION + " " + strconv.Itoa(getStatusValue(response.statusCode)) + " " + statusString + CRLF
+	statusString := getStatusString(response.StatusCode)
+	return HTTP + HTTP_VERSION + " " + strconv.Itoa(getStatusValue(response.StatusCode)) + " " + statusString + CRLF
 }
 
 func createHeaders(response Response) string {
 	var buffer bytes.Buffer
-	for key, value := range response.headers {
+	for key, value := range response.Headers {
 		if key == CONTENT_LENGTH {
 			continue
 		}
 		buffer.WriteString(createHeaderString(key, value))
 	}
 
-	if length := len(response.body); length != 0 {
+	if length := len(response.Body); length != 0 {
 		buffer.WriteString(createHeaderString(CONTENT_LENGTH, strconv.Itoa(length)))
 	}
 
@@ -76,14 +76,14 @@ func createHeaders(response Response) string {
 }
 
 func createBody(response Response) string {
-	return CRLF + response.body + CRLF
+	return CRLF + CRLF + response.Body + CRLF
 }
 
-func getStatusString(statusCode STATUS_CODE) string {
+func getStatusString(statusCode StatusCode_t) string {
 	return statusStrings[statusCode]
 }
 
-func getStatusValue(statusCode STATUS_CODE) int {
+func getStatusValue(statusCode StatusCode_t) int {
 	value := statusValues[statusCode]
 	if value == 0 {
 		return statusValues[INTERNAL_SERVER_ERROR]

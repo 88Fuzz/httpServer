@@ -21,7 +21,8 @@ func StartServer(port int) (net.Listener, error) {
 	return listener, err
 }
 
-func Process(listener net.Listener, processor ConnectionProcessor) {
+func Process(listener net.Listener, connectionProcessor ConnectionProcessor,
+	requestProcessorProvider HttpRequestProcessorProvider) {
 	defer listener.Close()
 	for {
 		connection, err := listener.Accept()
@@ -29,8 +30,7 @@ func Process(listener net.Listener, processor ConnectionProcessor) {
 			fmt.Fprintf(os.Stderr, "Error accepting connection.\n")
 			continue
 		}
-		if err = processor.Process(connection); err != nil {
-			fmt.Fprintf(os.Stderr, "ERROR processing the connection mother fucker\n")
-		}
+
+		connectionProcessor.Process(connection, requestProcessorProvider)
 	}
 }

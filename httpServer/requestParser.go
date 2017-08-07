@@ -17,12 +17,12 @@ func parseRequest(requestStr string) (Request, error) {
 		return request, err
 	}
 
-	if request.version > 1.0 {
+	if request.Version > 1.0 {
 		sliceIndex := getLastHeaderIndex(lines)
-		request.headers = parseHeaders(lines[1:sliceIndex])
+		request.Headers = parseHeaders(lines[1:sliceIndex])
 
 		if sliceIndex < linesLength {
-			request.body = parseBody(lines[sliceIndex+1 : linesLength])
+			request.Body = parseBody(lines[sliceIndex+1 : linesLength])
 		}
 	}
 
@@ -48,7 +48,7 @@ func parseRequestLineV10(words []string) (Request, error) {
 	if err != nil {
 		return request, err
 	}
-	request.requestType = FULL
+	request.RequestType = FULL
 
 	return request, nil
 }
@@ -57,10 +57,10 @@ func parseRequestLineV09(words []string) (Request, error) {
 	request, err := baseParseRequestLine(words)
 	if err == nil {
 		//HTTP/0.9 only supports GET methods
-		if request.method != GET {
+		if request.Method != GET {
 			return request, errors.New("HTTP/0.9 only supports GET method.")
 		}
-		request.requestType = SIMPLE
+		request.RequestType = SIMPLE
 	}
 
 	return request, err
@@ -73,31 +73,31 @@ func baseParseRequestLine(words []string) (Request, error) {
 	if err != nil {
 		return request, err
 	}
-	request.method = method
-	request.methodValue = words[0]
+	request.Method = method
+	request.MethodString = words[0]
 
 	uri, err := getURI(words[1])
 	if err != nil {
 		return request, err
 	}
 
-	request.path = uri
+	request.Path = uri
 
 	if len(words) == 2 {
-		request.version = 0.9
+		request.Version = 0.9
 		return request, nil
 	}
 
 	if version, err := getHTTPVersion(words[2]); err != nil {
 		return request, err
 	} else {
-		request.version = version
+		request.Version = version
 	}
 
 	return request, nil
 }
 
-func getMethod(value string) (METHOD, error) {
+func getMethod(value string) (Method_t, error) {
 	if length := len(value); length == 0 {
 		return INVALID, errors.New("Invalid method.")
 	}
