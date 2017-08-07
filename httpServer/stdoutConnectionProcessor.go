@@ -13,7 +13,7 @@ func (connectionProcessor StdoutConnectionProcessor) Process(connection net.Conn
 	var requestBuffer bytes.Buffer
 	var err error
 	count, readSize := 256, 256
-	timeout := 5000000 * time.Millisecond
+	timeout := 50 * time.Millisecond
 
 	for count >= readSize {
 		bytes := make([]byte, readSize)
@@ -37,16 +37,29 @@ func (connectionProcessor StdoutConnectionProcessor) Process(connection net.Conn
 	}
 
 	reqStr := requestBuffer.String()
-	req, err := parseRequest(reqStr)
+	request, err := parseRequest(reqStr)
 
 	if err != nil {
 		fmt.Printf("Error parsing ")
 		fmt.Println(err)
 	} else {
-		fmt.Println("Valid request: ", req.requestType, req.version, req.method, req.methodValue, req.path, req.headers)
+		fmt.Println("Valid request: ", request.requestType, request.version, request.method, request.methodValue, request.path,
+			request.headers, request.body)
 	}
 
 	fmt.Printf("All done here\n")
 
+	returnString := createHttpResponse(request, createTempResponse())
+	fmt.Println("Writing ", returnString)
+	connection.Write([]byte(returnString))
+	connection.Close()
+
 	return nil
+}
+
+func createTempResponse() Response {
+	var response Response
+	response.statusCode = NOT_FOUND
+
+	return response
 }

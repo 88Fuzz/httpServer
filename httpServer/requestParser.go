@@ -5,28 +5,31 @@ import "strconv"
 import "errors"
 import "net/url"
 
-func parseRequest(requestStr string) (request, error) {
-	lines := strings.Split(requestStr, "\r\n")
-	if len(lines) == 0 {
-		return request{}, errors.New("No data in request input")
+func parseRequest(requestStr string) (Request, error) {
+	lines := strings.Split(requestStr, CRLF)
+	linesLength := len(lines)
+	if linesLength == 0 {
+		return Request{}, errors.New("No data in request input")
 	}
 
-	req, err := parseRequestLine(lines[0])
+	request, err := parseRequestLine(lines[0])
 	if err != nil {
-		return req, err
+		return request, err
 	}
 
-	if req.version > 1.0 {
+	if request.version > 1.0 {
 		sliceIndex := getLastHeaderIndex(lines)
-		headerLines := lines[1:sliceIndex]
-		req.headers = parseHeaders(headerLines)
+		request.headers = parseHeaders(lines[1:sliceIndex])
+
+		if sliceIndex < linesLength {
+			request.body = parseBody(lines[sliceIndex+1 : linesLength])
+		}
 	}
 
-	//TODO parse the rest of the request, just the body is left
-	return req, err
+	return request, err
 }
 
-func parseRequestLine(requestLine string) (request, error) {
+func parseRequestLine(requestLine string) (Request, error) {
 	words := strings.Split(requestLine, " ")
 	//For http/0.9 it will only be of length 2
 
@@ -36,62 +39,62 @@ func parseRequestLine(requestLine string) (request, error) {
 	case 2:
 		return parseRequestLineV09(words)
 	default:
-		return request{}, errors.New("Request line is malformed.")
+		return Request{}, errors.New("Request line is malformed.")
 	}
 }
 
-func parseRequestLineV10(words []string) (request, error) {
-	req, err := baseParseRequestLine(words)
+func parseRequestLineV10(words []string) (Request, error) {
+	request, err := baseParseRequestLine(words)
 	if err != nil {
-		return req, err
+		return request, err
 	}
-	req.requestType = FULL
+	request.requestType = FULL
 
-	return req, nil
+	return request, nil
 }
 
-func parseRequestLineV09(words []string) (request, error) {
-	req, err := baseParseRequestLine(words)
+func parseRequestLineV09(words []string) (Request, error) {
+	request, err := baseParseRequestLine(words)
 	if err == nil {
 		//HTTP/0.9 only supports GET methods
-		if req.method != GET {
-			return req, errors.New("HTTP/0.9 only supports GET method.")
+		if request.method != GET {
+			return request, errors.New("HTTP/0.9 only supports GET method.")
 		}
-		req.requestType = SIMPLE
+		request.requestType = SIMPLE
 	}
 
-	return req, err
+	return request, err
 }
 
-func baseParseRequestLine(words []string) (request, error) {
-	var req request
+func baseParseRequestLine(words []string) (Request, error) {
+	var request Request
 
 	method, err := getMethod(words[0])
 	if err != nil {
-		return req, err
+		return request, err
 	}
-	req.method = method
-	req.methodValue = words[0]
+	request.method = method
+	request.methodValue = words[0]
 
 	uri, err := getURI(words[1])
 	if err != nil {
-		return req, err
+		return request, err
 	}
 
-	req.path = uri
+	request.path = uri
 
 	if len(words) == 2 {
-		req.version = 0.9
-		return req, nil
+		request.version = 0.9
+		return request, nil
 	}
 
 	if version, err := getHTTPVersion(words[2]); err != nil {
-		return req, err
+		return request, err
 	} else {
-		req.version = version
+		request.version = version
 	}
 
-	return req, nil
+	return request, nil
 }
 
 func getMethod(value string) (METHOD, error) {
@@ -124,7 +127,7 @@ func getHTTPVersion(value string) (float32, error) {
 		return -1, errors.New("Invalid HTTP version.")
 	}
 
-	versionStr := strings.Trim(value, "HTTP/")
+	versionStr := strings.Trim(value, HTTP)
 	version, err := strconv.ParseFloat(versionStr, 32)
 	if err != nil {
 		return -1, err

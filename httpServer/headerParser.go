@@ -20,7 +20,7 @@ func getLastHeaderIndex(lines []string) int {
 func parseHeaders(lines []string) map[string]string {
 	headerMap := make(map[string]string, len(lines))
 	for _, line := range lines {
-		split := strings.Split(line, ": ")
+		split := strings.Split(line, HEADER_DELIMITER)
 		if len(split) != 2 {
 			//Malformed header ignore it?
 			continue
