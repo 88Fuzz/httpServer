@@ -2,13 +2,23 @@ package httpServer
 
 import "net"
 import "io"
-
 import "time"
 import "bytes"
 
-type StdoutConnectionProcessor struct{}
+const timeout = 300 * time.Millisecond
 
-func (connectionProcessor StdoutConnectionProcessor) Process(connection net.Conn,
+type SingleConnectionProcessor struct{}
+
+func (connectionProcessor SingleConnectionProcessor) Init() error {
+	//Do nothing
+	return nil
+}
+
+func (connectionProcessor SingleConnectionProcessor) Finish() {
+	//Do nothing
+}
+
+func (connectionProcessor SingleConnectionProcessor) Process(connection net.Conn,
 	processorProvider HttpRequestProcessorProvider) {
 	request, err := readRequest(connection)
 	if err != nil {
@@ -26,7 +36,6 @@ func readRequest(connection net.Conn) (Request, error) {
 	var requestBuffer bytes.Buffer
 	var err error
 	count, readSize := 256, 256
-	timeout := 50 * time.Millisecond
 
 	for count >= readSize {
 		bytes := make([]byte, readSize)
@@ -64,6 +73,13 @@ func writeError(connection net.Conn, statusCode StatusCode_t) {
 }
 
 func writeAndClose(connection net.Conn, response string) {
+
+	err := connection.SetWriteDeadline(time.Now().Add(timeout))
+	if err != nil {
+		//swallow error and close the connection
+		connection.Close()
+		return
+	}
 	connection.Write([]byte(response))
 	connection.Close()
 }

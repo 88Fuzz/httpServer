@@ -23,7 +23,9 @@ func StartServer(port int) (net.Listener, error) {
 
 func Process(listener net.Listener, connectionProcessor ConnectionProcessor,
 	requestProcessorProvider HttpRequestProcessorProvider) {
+	connectionProcessor.Init()
 	defer listener.Close()
+	defer connectionProcessor.Finish()
 	for {
 		connection, err := listener.Accept()
 		if err != nil {

@@ -11,8 +11,11 @@ func main() {
 		fmt.Fprintf(os.Stderr, "Error could not start up: %s", err.Error())
 		return
 	}
+	var processor httpServer.ThreadedConnectionProcessor
+	processor.NumberOfThreads = 10
+	processor.Processor = httpServer.SingleConnectionProcessor{}
 
-	httpServer.Process(listener, httpServer.StdoutConnectionProcessor{}, FuckOffProvider{})
+	httpServer.Process(listener, &processor, FuckOffProvider{})
 }
 
 type FuckOffProcessor struct{}
