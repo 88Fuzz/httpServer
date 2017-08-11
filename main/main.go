@@ -6,7 +6,7 @@ import "io/ioutil"
 import "github.com/88Fuzz/httpServer"
 
 func main() {
-	listener, err := httpServer.StartServer(8080)
+	listener, err := httpServer.StartServer(1080)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error could not start up: %s", err.Error())
 		return
