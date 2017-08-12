@@ -24,6 +24,12 @@ func StartServer(port int) (net.Listener, error) {
 func Process(listener net.Listener, connectionProcessor ConnectionProcessor,
 	requestProcessorProvider HttpRequestProcessorProvider) {
 	connectionProcessor.Init()
+	logFile, err := os.Create("/tmp/connections.txt")
+	if err != nil {
+		fmt.Println("Could not open logfile")
+		return
+	}
+	defer logFile.Close()
 	defer listener.Close()
 	defer connectionProcessor.Finish()
 	for {
@@ -32,6 +38,7 @@ func Process(listener net.Listener, connectionProcessor ConnectionProcessor,
 			fmt.Fprintf(os.Stderr, "Error accepting connection.\n")
 			continue
 		}
+		logFile.WriteString("ReceivedConnection from: " + connection.RemoteAddr().String() + "\n")
 
 		connectionProcessor.Process(connection, requestProcessorProvider)
 	}
