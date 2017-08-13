@@ -19,7 +19,9 @@ func parseRequest(requestStr string) (Request, error) {
 
 	if request.Version > 1.0 {
 		sliceIndex := getLastHeaderIndex(lines)
-		request.Headers = parseHeaders(lines[1:sliceIndex])
+		if request.Headers, err = parseHeaders(lines[1:sliceIndex]); err != nil {
+			return request, err
+		}
 
 		if sliceIndex < linesLength {
 			request.Body = parseBody(lines[sliceIndex+1 : linesLength])

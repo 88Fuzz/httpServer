@@ -5,9 +5,10 @@ type RequestType_t int
 type StatusCode_t int
 
 const CRLF = "\r\n"
+const HEADER_DELIMITER = ": "
+const HEADER_VALUE_DELIMITER = ","
 const HTTP = "HTTP/"
 const HTTP_VERSION = "1.0"
-const HEADER_DELIMITER = ": "
 
 const (
 	GET Method_t = iota + 1

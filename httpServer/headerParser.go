@@ -1,6 +1,11 @@
 package httpServer
 
-import "strings"
+import "regexp"
+import "errors"
+
+const defaultPreviousKey = "NONE"
+
+var headerDelimiterPattern = regexp.MustCompile(":\\s")
 
 func getLastHeaderIndex(lines []string) int {
 	length := len(lines)
@@ -17,17 +22,27 @@ func getLastHeaderIndex(lines []string) int {
 	return index
 }
 
-func parseHeaders(lines []string) map[string]string {
+func parseHeaders(lines []string) (map[string]string, error) {
 	headerMap := make(map[string]string, len(lines))
+	previousKey := defaultPreviousKey
 	for _, line := range lines {
-		split := strings.Split(line, HEADER_DELIMITER)
-		if len(split) != 2 {
-			//Malformed header ignore it?
+		split := headerDelimiterPattern.Split(line, -1)
+		if len(split) == 1 {
+			//If there's no header key on this line, it means the values should be appending to the previous key
+			if previousKey == defaultPreviousKey {
+				return headerMap, errors.New("Headers malformed")
+			}
+			previousValue := headerMap[previousKey]
+			headerMap[previousKey] = previousValue + HEADER_VALUE_DELIMITER + split[0]
+		} else if len(split) != 2 {
+			//Malformed header
+			return headerMap, errors.New("Headers malformed")
 			continue
+		} else {
+			previousKey = split[0]
+			headerMap[previousKey] = split[1]
 		}
-
-		headerMap[split[0]] = split[1]
 	}
 
-	return headerMap
+	return headerMap, nil
 }
