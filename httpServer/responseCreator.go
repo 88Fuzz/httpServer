@@ -51,6 +51,7 @@ func createHttpResponse(request Request, response Response) string {
 		buffer.WriteString(createBody(response))
 	}
 
+	buffer.WriteString("\000")
 	return buffer.String()
 }
 
