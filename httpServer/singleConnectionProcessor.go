@@ -4,6 +4,7 @@ import "net"
 import "io"
 import "time"
 import "bytes"
+import "strings"
 
 const keepAliveTimeout = 5000 * time.Millisecond
 const timeout = 300 * time.Millisecond
@@ -42,7 +43,8 @@ func (connectionProcessor SingleConnectionProcessor) Process(connection net.Conn
 
 		response := processRequest(processorProvider, request)
 		responseString := createHttpResponse(request, response)
-		keepProcessing = writeAndClose(connection, responseString, false)
+		keepProcessing = write(connection, responseString, false)
+		keepProcessing = closeConnectionIfPossible(request, connection, keepProcessing)
 	}
 }
 
@@ -92,17 +94,17 @@ func readRequest(connection net.Conn, maxTimeout time.Time) (Request, error, boo
 	return request, err, false
 }
 
-func writeError(connection net.Conn, statusCode StatusCode_t) {
+func writeError(connection net.Conn, statusCode StatusCode_t) bool {
 	var errorResponse Response
 	var request Request
 	errorResponse.StatusCode = statusCode
 	request.RequestType = FULL
 
 	responseString := createHttpResponse(request, errorResponse)
-	writeAndClose(connection, responseString, true)
+	return write(connection, responseString, true)
 }
 
-func writeAndClose(connection net.Conn, response string, closeConnection bool) bool {
+func write(connection net.Conn, response string, closeConnection bool) bool {
 	err := connection.SetWriteDeadline(time.Now().Add(timeout))
 	if err != nil {
 		//swallow error and close the connection
@@ -110,8 +112,6 @@ func writeAndClose(connection net.Conn, response string, closeConnection bool) b
 		return false
 	}
 	connection.Write([]byte(response))
-	//connection.Write([]byte("\000"))
-	//connection.Close()
 	if closeConnection {
 		connection.Close()
 		return false
@@ -129,5 +129,28 @@ func writeAndClose(connection net.Conn, response string, closeConnection bool) b
 			return true
 		}
 	}
+	connection.Close()
 	return false
+}
+
+func closeConnectionIfPossible(request Request, connection net.Conn, shouldStayConnected bool) bool {
+	if shouldKeepAlive(request, shouldStayConnected) {
+		return true
+	}
+	connection.Close()
+	return false
+}
+
+func shouldKeepAlive(request Request, shouldStayConnected bool) bool {
+	if !shouldStayConnected {
+		return false
+	} else if !insensitiveContains(request.Headers[CONNECTION], "keep-alive") {
+		return false
+	}
+
+	return true
+}
+
+func insensitiveContains(base string, search string) bool {
+	return strings.Contains(strings.ToLower(base), strings.ToLower(search))
 }
